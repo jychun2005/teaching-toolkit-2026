@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小組隨機分組器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    max-width: 800px;
+    width: 100%;
+    background: #16213e;
+    border-radius: 24px;
+    padding: 36px 28px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    border: 1px solid #0f3460;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    color: #e94560;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .subtitle { text-align: center; color: #666; font-size: .8rem; margin-bottom: 24px; }
+
+  .config { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 24px; }
+  .config-field { flex: 1; min-width: 140px; }
+  .config-field label { display: block; font-size: .8rem; color: #888; margin-bottom: 4px; }
+  .config-field input, .config-field select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: .95rem;
+  }
+  .config-field input:focus, .config-field select:focus { outline: 2px solid #e94560; }
+  .config button {
+    background: #e94560;
+    color: #fff;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .config button:hover { filter: brightness(1.15); }
+
+  .split { display: flex; gap: 20px; }
+  .input-panel { flex: 1; }
+  .input-panel textarea {
+    width: 100%;
+    height: 280px;
+    padding: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: .9rem;
+    resize: vertical;
+  }
+  .input-panel textarea:focus { outline: 2px solid #e94560; }
+  .input-panel .hint { color: #666; font-size: .75rem; margin-top: 6px; }
+
+  .result-panel { flex: 1; min-width: 0; }
+  .result-panel h3 { color: #4ecca3; font-size: .85rem; margin-bottom: 8px; }
+
+  .groups {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 360px;
+    overflow-y: auto;
+  }
+  .groups::-webkit-scrollbar { width: 4px; }
+  .groups::-webkit-scrollbar-thumb { background: #1a4a8a; border-radius: 4px; }
+
+  .group-card {
+    background: #0f3460;
+    border-radius: 12px;
+    padding: 12px 16px;
+    border-left: 4px solid #e94560;
+  }
+  .group-card .group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .group-card .group-header .gname { font-weight: 600; color: #4ecca3; font-size: .9rem; }
+  .group-card .group-header .gcount { color: #888; font-size: .8rem; }
+  .group-card .members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .group-card .members span {
+    background: #1a4a8a;
+    padding: 3px 12px;
+    border-radius: 6px;
+    font-size: .85rem;
+  }
+
+  .empty-result {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #555;
+    text-align: center;
+    font-size: .9rem;
+  }
+
+  .actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .actions button {
+    background: #0f3460;
+    color: #eee;
+    border: 1px solid #1a4a8a;
+    padding: 8px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: .9rem;
+    transition: all .2s;
+  }
+  .actions button:hover { background: #1a4a8a; }
+  .actions .shuffle-btn { background: #4ecca3; color: #1a1a2e; border: none; font-weight: 600; }
+
+  @media (max-width: 620px) {
+    .split { flex-direction: column; }
+    .input-panel textarea { height: 160px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🔀 小組隨機分組器</h1>
+  <p class="subtitle">輸入學生名單，一鍵隨機分組</p>
+
+  <div class="config">
+    <div class="config-field">
+      <label>每組人數</label>
+      <select id="sizeSelect">
+        <option value="2">2 人</option>
+        <option value="3">3 人</option>
+        <option value="4" selected>4 人</option>
+        <option value="5">5 人</option>
+        <option value="6">6 人</option>
+        <option value="0">自動均分</option>
+      </select>
+    </div>
+    <button id="divideBtn">🔀 開始分組</button>
+  </div>
+
+  <div class="split">
+    <div class="input-panel">
+      <textarea id="nameList" placeholder="每行一個姓名&#10;例：&#10;王小明&#10;李小華&#10;張大偉">王小明
+李小華
+張大偉
+陳小美
+林小真
+黃小豪
+劉小安
+吳小怡
+鄭小凱
+楊小晴
+許小婷
+何小翔
+周小文
+徐小芳
+孫小志
+蔡小婷</textarea>
+      <div class="hint">共 <span id="nameCount">16</span> 人</div>
+    </div>
+    <div class="result-panel">
+      <h3>📋 分組結果</h3>
+      <div class="groups" id="groupsContainer">
+        <div class="empty-result">點擊「開始分組」產生結果</div>
+      </div>
+      <div class="actions">
+        <button class="shuffle-btn" id="reshuffleBtn">⟳ 重新洗牌</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const nameList = document.getElementById('nameList');
+  const nameCount = document.getElementById('nameCount');
+  const sizeSelect = document.getElementById('sizeSelect');
+  const divideBtn = document.getElementById('divideBtn');
+  const reshuffleBtn = document.getElementById('reshuffleBtn');
+  const groupsContainer = document.getElementById('groupsContainer');
+
+  function getNames() {
+    return nameList.value.split('\n').map(s => s.trim()).filter(Boolean);
+  }
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function divide() {
+    const names = getNames();
+    if (names.length === 0) {
+      groupsContainer.innerHTML = '<div class="empty-result">⚠️ 請先輸入學生姓名</div>';
+      return;
+    }
+
+    const size = parseInt(sizeSelect.value);
+    const shuffled = shuffle(names);
+    const groups = [];
+
+    if (size === 0) {
+      // Auto equal: try 2-6, pick the one with most balanced groups
+      let bestGroups = null;
+      let bestScore = Infinity;
+      for (let gSize = 2; gSize <= 6; gSize++) {
+        const g = chunk(shuffled, gSize);
+        const sizes = g.map(a => a.length);
+        const score = Math.max(...sizes) - Math.min(...sizes);
+        if (score < bestScore) {
+          bestScore = score;
+          bestGroups = g;
+        }
+      }
+      groups.push(...bestGroups);
+    } else {
+      groups.push(...chunk(shuffled, size));
+    }
+
+    renderGroups(groups);
+  }
+
+  function chunk(arr, size) {
+    const result = [];
+    for (let i = 0; i < arr.length; i += size) {
+      result.push(arr.slice(i, i + size));
+    }
+    // If last group has only 1 and we can redistribute, borrow from previous
+    if (result.length > 1 && result[result.length - 1].length === 1) {
+      const last = result.pop();
+      const target = result[result.length - 1];
+      target.push(last[0]);
+      // Rebalance: if target now has size+1, move one to last
+      if (target.length > size) {
+        result.push([target.pop()]);
+      }
+    }
+    return result;
+  }
+
+  function renderGroups(groups) {
+    const colors = ['#e94560', '#4ecca3', '#ffc107', '#8b5cf6', '#f97316', '#06b6d4'];
+    groupsContainer.innerHTML = groups.map((g, i) => `
+      <div class="group-card" style="border-left-color: ${colors[i % colors.length]}">
+        <div class="group-header">
+          <span class="gname">📌 第 ${i + 1} 組</span>
+          <span class="gcount">${g.length} 人</span>
+        </div>
+        <div class="members">
+          ${g.map(n => `<span>${n}</span>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  nameList.addEventListener('input', () => {
+    nameCount.textContent = getNames().length;
+  });
+
+  divideBtn.addEventListener('click', divide);
+  reshuffleBtn.addEventListener('click', divide);
+
+  // Init
+  nameCount.textContent = getNames().length;
+</script>
+</body>
+</html>
