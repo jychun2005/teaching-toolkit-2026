@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教學工具箱</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    max-width: 900px;
+    width: 100%;
+    background: #16213e;
+    border-radius: 24px;
+    padding: 40px 30px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    border: 1px solid #0f3460;
+  }
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 8px;
+    color: #e94560;
+    letter-spacing: 3px;
+  }
+  .subtitle { text-align: center; color: #666; font-size: .9rem; margin-bottom: 32px; }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  .tool-card {
+    background: #0f3460;
+    border-radius: 18px;
+    padding: 28px 20px;
+    text-align: center;
+    border: 1px solid #1a4a8a;
+    cursor: pointer;
+    transition: all .25s;
+    text-decoration: none;
+    color: #eee;
+    display: block;
+  }
+  .tool-card:hover {
+    border-color: #e94560;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(233,69,96,.25);
+  }
+  .tool-card .icon { font-size: 2.8rem; margin-bottom: 12px; }
+  .tool-card .name { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+  .tool-card .desc { font-size: .8rem; color: #888; line-height: 1.4; }
+  .tool-card:nth-child(1) { border-top: 3px solid #4ecca3; }
+  .tool-card:nth-child(2) { border-top: 3px solid #e94560; }
+  .tool-card:nth-child(3) { border-top: 3px solid #ffc107; }
+  .tool-card:nth-child(4) { border-top: 3px solid #8b5cf6; }
+
+  .footer { text-align: center; color: #555; font-size: .75rem; }
+  .footer a { color: #4ecca3; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🎒 教學工具箱</h1>
+  <p class="subtitle">課堂實用工具集 — 點選卡片開啟</p>
+
+  <div class="tools-grid">
+    <a class="tool-card" href="tools/classroom-timer/">
+      <div class="icon">⏱</div>
+      <div class="name">課堂計時器</div>
+      <div class="desc">倒數計時 + 小組計分板<br>可新增/刪除小組</div>
+    </a>
+
+    <a class="tool-card" href="tools/random-picker/">
+      <div class="icon">🎲</div>
+      <div class="name">隨機抽人</div>
+      <div class="desc">全班名單抽選<br>不重複模式 + 動畫效果</div>
+    </a>
+
+    <a class="tool-card" href="tools/coordinate-hunter/">
+      <div class="icon">🎯</div>
+      <div class="name">座標獵人</div>
+      <div class="desc">11×11 座標練習遊戲<br>60 秒限時找出隱藏點</div>
+    </a>
+
+    <a class="tool-card" href="tools/group-divider/">
+      <div class="icon">🔀</div>
+      <div class="name">隨機分組</div>
+      <div class="desc">輸入名單自動分組<br>自訂每組人數</div>
+    </a>
+  </div>
+
+  <div class="footer">
+    <a href="https://github.com/jychun2005/teaching-toolkit-2026">GitHub</a> — 2026
+  </div>
+</div>
+
+</body>
+</html>
