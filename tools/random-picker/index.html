@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隨機抽人點名器</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    max-width: 800px;
+    width: 100%;
+    background: #16213e;
+    border-radius: 24px;
+    padding: 40px 30px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    border: 1px solid #0f3460;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    margin-bottom: 24px;
+    color: #e94560;
+    letter-spacing: 2px;
+  }
+
+  .picker-area {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .slot {
+    font-size: 5rem;
+    font-weight: 800;
+    color: #fff;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f3460;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    border: 2px solid #1a4a8a;
+    padding: 16px;
+    transition: all .15s;
+  }
+  .slot.spinning {
+    border-color: #e94560;
+    box-shadow: 0 0 30px rgba(233,69,96,.4);
+  }
+  .slot.picked {
+    border-color: #4ecca3;
+    box-shadow: 0 0 30px rgba(78,204,163,.4);
+    animation: pop .35s ease;
+  }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  .controls { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .controls button {
+    background: #0f3460;
+    color: #eee;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all .2s;
+  }
+  .controls button:hover { filter: brightness(1.2); }
+  .controls .pick-btn { background: #e94560; font-weight: 700; }
+  .controls .reset-btn { background: #4ecca3; color: #1a1a2e; }
+
+  .stats {
+    text-align: center;
+    font-size: .9rem;
+    color: #888;
+    margin-bottom: 24px;
+  }
+  .stats span { color: #4ecca3; font-weight: 600; }
+
+  .lists { display: flex; gap: 20px; }
+  .list-box {
+    flex: 1;
+    background: #0f3460;
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid #1a4a8a;
+  }
+  .list-box h3 {
+    font-size: .85rem;
+    color: #4ecca3;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .list-box ul {
+    list-style: none;
+    min-height: 60px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .list-box ul::-webkit-scrollbar { width: 4px; }
+  .list-box ul::-webkit-scrollbar-thumb { background: #1a4a8a; border-radius: 4px; }
+  .list-box li {
+    padding: 5px 10px;
+    margin-bottom: 3px;
+    border-radius: 6px;
+    font-size: .9rem;
+  }
+  .list-box .remaining li { background: #1a4a8a; }
+  .list-box .picked li { background: #1a3a2e; color: #4ecca3; text-decoration: line-through; opacity: .6; }
+  .empty-msg { color: #666; text-align: center; padding: 20px; font-size: .85rem; }
+
+  .edit-area {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #0f3460;
+  }
+  .edit-area summary {
+    cursor: pointer;
+    color: #888;
+    font-size: .85rem;
+    padding: 4px 0;
+  }
+  .edit-area summary:hover { color: #eee; }
+  .edit-area textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: .9rem;
+    resize: vertical;
+    min-height: 120px;
+    margin-top: 10px;
+  }
+  .edit-area textarea:focus { outline: 2px solid #e94560; }
+  .edit-actions { display: flex; gap: 10px; margin-top: 10px; }
+  .edit-actions button {
+    background: #0f3460;
+    color: #eee;
+    border: 1px solid #1a4a8a;
+    padding: 8px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: .85rem;
+  }
+  .edit-actions button:hover { background: #1a4a8a; }
+  .edit-actions .save-btn { background: #4ecca3; color: #1a1a2e; border: none; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🎲 隨機抽人點名器</h1>
+
+  <div class="picker-area">
+    <div class="slot" id="slot">🔄 準備好了</div>
+    <div class="controls">
+      <button class="pick-btn" id="pickBtn">🎯 抽人</button>
+      <button class="reset-btn" id="resetBtn">⟲ 重置全部</button>
+    </div>
+    <div class="stats">
+      剩餘 <span id="remainCount">0</span> 人 ／ 已抽 <span id="pickedCount">0</span> 人
+      ／ 不重複模式 <span id="modeLabel">✅ 開啟</span>
+    </div>
+  </div>
+
+  <div class="lists">
+    <div class="list-box">
+      <h3>📋 待抽名單</h3>
+      <ul class="remaining" id="remainingList"><li class="empty-msg">尚未匯入名單</li></ul>
+    </div>
+    <div class="list-box">
+      <h3>✅ 已抽名單</h3>
+      <ul class="picked" id="pickedList"><li class="empty-msg">尚無</li></ul>
+    </div>
+  </div>
+
+  <div class="edit-area">
+    <details>
+      <summary>✏️ 編輯全班名單（每行一個姓名）</summary>
+      <textarea id="nameInput" placeholder="請輸入姓名，每行一個&#10;例如：&#10;王小明&#10;李小華&#10;張大偉">王小明
+李小華
+張大偉
+陳小美
+林小真
+黃小豪
+劉小安
+吳小怡
+鄭小凱
+楊小晴
+許小婷
+何小翔</textarea>
+      <div class="edit-actions">
+        <button class="save-btn" id="saveNamesBtn">💾 儲存並重置</button>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+  let allNames = [];
+  let remainingNames = [];
+  let pickedNames = [];
+  let isSpinning = false;
+
+  const slot = document.getElementById('slot');
+  const remainList = document.getElementById('remainingList');
+  const pickedList = document.getElementById('pickedList');
+  const remainCount = document.getElementById('remainCount');
+  const pickedCount = document.getElementById('pickedCount');
+  const modeLabel = document.getElementById('modeLabel');
+  const pickBtn = document.getElementById('pickBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const nameInput = document.getElementById('nameInput');
+  const saveBtn = document.getElementById('saveNamesBtn');
+
+  function loadNames() {
+    const raw = nameInput.value.split('\n').map(s => s.trim()).filter(Boolean);
+    allNames = raw;
+    remainingNames = [...allNames];
+    pickedNames = [];
+    slot.textContent = '🔄 準備好了';
+    slot.className = 'slot';
+    updateUI();
+  }
+
+  function updateUI() {
+    // Remaining
+    if (remainingNames.length === 0) {
+      remainList.innerHTML = '<li class="empty-msg">無剩餘人數</li>';
+    } else {
+      remainList.innerHTML = remainingNames.map(n => `<li>${n}</li>`).join('');
+    }
+    // Picked
+    if (pickedNames.length === 0) {
+      pickedList.innerHTML = '<li class="empty-msg">尚無</li>';
+    } else {
+      pickedList.innerHTML = pickedNames.map(n => `<li>${n}</li>`).join('');
+    }
+    remainCount.textContent = remainingNames.length;
+    pickedCount.textContent = pickedNames.length;
+    modeLabel.textContent = '✅ 開啟';
+    if (remainingNames.length === 0 && allNames.length > 0) {
+      modeLabel.textContent = '⚠️ 已抽完，將重複抽取';
+    }
+  }
+
+  function spin() {
+    if (isSpinning) return;
+    if (allNames.length === 0) { slot.textContent = '⚠️ 請先匯入名單'; return; }
+
+    const pool = remainingNames.length > 0 ? remainingNames : allNames;
+    isSpinning = true;
+    pickBtn.disabled = true;
+    slot.className = 'slot spinning';
+
+    let count = 0;
+    const maxSpins = 20 + Math.floor(Math.random() * 10);
+    const interval = setInterval(() => {
+      slot.textContent = pool[Math.floor(Math.random() * pool.length)];
+      count++;
+      if (count >= maxSpins) {
+        clearInterval(interval);
+        const winner = pool[Math.floor(Math.random() * pool.length)];
+        slot.textContent = winner;
+        slot.className = 'slot picked';
+
+        // Remove from remaining if no-repeat mode
+        const idx = remainingNames.indexOf(winner);
+        if (idx !== -1) {
+          remainingNames.splice(idx, 1);
+          pickedNames.push(winner);
+        } else {
+          // All have been picked, re-picking resets
+          slot.className = 'slot picked';
+        }
+        updateUI();
+        isSpinning = false;
+        pickBtn.disabled = false;
+      }
+    }, 60);
+  }
+
+  function resetAll() {
+    if (isSpinning) return;
+    remainingNames = [...allNames];
+    pickedNames = [];
+    slot.textContent = '🔄 準備好了';
+    slot.className = 'slot';
+    updateUI();
+  }
+
+  pickBtn.addEventListener('click', spin);
+  resetBtn.addEventListener('click', resetAll);
+
+  saveBtn.addEventListener('click', () => {
+    loadNames();
+    // Close details after save
+    const details = document.querySelector('.edit-area details');
+    if (details) details.removeAttribute('open');
+  });
+
+  // Keyboard shortcut: Space to pick
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); spin(); }
+  });
+
+  // Init
+  loadNames();
+</script>
+</body>
+</html>
