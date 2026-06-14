@@ -9,10 +9,13 @@
 - **接續工作**：對我說「讀工作筆記、告訴我上次做到哪」
 
 ## 工具清單
-- [課堂計時器 + 計分板](tools/classroom-timer/index.html) — 可設定時倒數（1/3/5/10分／自訂）+ 四組計分板，黑板風格
-- [隨機抽人點名器](tools/random-picker/index.html) — 全班名單抽選、不重複模式、動畫效果
-- [座標獵人](tools/coordinate-hunter/index.html) — 11×11 座標練習遊戲，60秒限時找出10個隱藏點
-- [小組隨機分組器](tools/group-divider/index.html) — 輸入名單、每組人數自由設定、一鍵洗牌
+- 🏠 [工具箱首頁](index.html) — 4 工具合併入口（GitHub Pages 根目錄）
+- ⏱ [課堂計時器 + 計分板](tools/classroom-timer/index.html) — 可設定時倒數 + 小組計分板，可新增/刪除小組
+- 🎲 [隨機抽人點名器](tools/random-picker/index.html) — 全班名單抽選、不重複模式、動畫效果
+- 🎯 [座標獵人](tools/coordinate-hunter/index.html) — 11×11 座標練習遊戲，60秒限時找出10個隱藏點
+- 🔀 [小組隨機分組器](tools/group-divider/index.html) — 輸入名單、每組人數自由設定、一鍵洗牌
+- 🔊 [課堂噪音計](tools/noise-meter/index.html) — 麥克風偵測音量，圓形儀表板，超標閃爍警示
+- 📊 [即時投票](tools/live-poll/index.html) — 自訂題目與選項，即時統計結果與百分比
 
 ## 工作注意事項
 - 學生資料一律去識別化（只用座號 + 班級代號）
