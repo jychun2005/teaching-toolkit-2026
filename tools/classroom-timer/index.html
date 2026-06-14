@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>課堂計時器 + 計分板</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    max-width: 900px;
+    width: 100%;
+    background: #16213e;
+    border-radius: 24px;
+    padding: 40px 30px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    border: 1px solid #0f3460;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    margin-bottom: 24px;
+    color: #e94560;
+    letter-spacing: 2px;
+  }
+  /* Timer */
+  .timer-section { text-align: center; margin-bottom: 32px; }
+  .timer-display {
+    font-size: 5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 4px;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(233,69,96,.3);
+    margin-bottom: 16px;
+  }
+  .timer-display.running { color: #4ecca3; text-shadow: 0 0 20px rgba(78,204,163,.3); }
+  .timer-display.warning { color: #ffc107; text-shadow: 0 0 20px rgba(255,193,7,.3); }
+  .timer-display.over { color: #e94560; text-shadow: 0 0 20px rgba(233,69,96,.5); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  .timer-presets { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .timer-presets button {
+    background: #0f3460;
+    color: #eee;
+    border: 1px solid #1a4a8a;
+    padding: 6px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .85rem;
+    transition: all .2s;
+  }
+  .timer-presets button:hover { background: #1a4a8a; }
+  .timer-presets button.active { background: #e94560; border-color: #e94560; }
+  .timer-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .timer-controls button {
+    background: #0f3460;
+    color: #eee;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all .2s;
+  }
+  .timer-controls button:hover { filter: brightness(1.2); }
+  .timer-controls .start-btn { background: #4ecca3; color: #1a1a2e; font-weight: 600; }
+  .timer-controls .stop-btn { background: #e94560; color: #fff; }
+  .timer-controls .reset-btn { background: #555; }
+
+  /* Scoreboard */
+  .scoreboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .group-card {
+    background: #0f3460;
+    border-radius: 16px;
+    padding: 20px 16px;
+    text-align: center;
+    border: 1px solid #1a4a8a;
+    transition: all .2s;
+  }
+  .group-card .group-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    cursor: pointer;
+    color: #4ecca3;
+  }
+  .group-card .group-name:hover { text-decoration: underline; }
+  .group-card .score {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 8px 0;
+  }
+  .group-card .score-controls { display: flex; gap: 8px; justify-content: center; }
+  .group-card .score-controls button {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    border: none;
+    font-size: 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .group-card .score-controls .plus { background: #4ecca3; color: #1a1a2e; }
+  .group-card .score-controls .minus { background: #e94560; color: #fff; }
+  .group-card .score-controls button:hover { filter: brightness(1.2); transform: scale(1.05); }
+  .group-card .score-controls .reset-group { background: #555; color: #eee; font-size: .9rem; width: auto; padding: 0 12px; }
+
+  /* Actions */
+  .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  .actions button {
+    background: #0f3460;
+    color: #eee;
+    border: 1px solid #1a4a8a;
+    padding: 8px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: .9rem;
+    transition: all .2s;
+  }
+  .actions button:hover { background: #1a4a8a; }
+  .actions .danger { border-color: #e94560; color: #e94560; }
+  .actions .danger:hover { background: #e94560; color: #fff; }
+
+  /* Modal */
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); align-items: center; justify-content: center; z-index: 100; }
+  .modal.show { display: flex; }
+  .modal-box {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%;
+    max-width: 400px;
+  }
+  .modal-box h3 { margin-bottom: 16px; color: #e94560; }
+  .modal-box input, .modal-box select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  .modal-box input:focus { outline: 2px solid #e94560; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-actions button {
+    padding: 8px 20px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: .9rem;
+  }
+  .modal-actions .confirm { background: #4ecca3; color: #1a1a2e; }
+  .modal-actions .cancel { background: #555; color: #eee; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>⏱ 課堂計時器 + 計分板</h1>
+
+  <div class="timer-section">
+    <div class="timer-display" id="timerDisplay">05:00</div>
+    <div class="timer-presets" id="timerPresets">
+      <button data-min="1">1 分</button>
+      <button data-min="3" class="active">3 分</button>
+      <button data-min="5">5 分</button>
+      <button data-min="10">10 分</button>
+      <button data-min="0">自訂</button>
+    </div>
+    <div class="timer-controls">
+      <button class="start-btn" id="startBtn">▶ 開始</button>
+      <button class="stop-btn" id="stopBtn" disabled>⏹ 停止</button>
+      <button class="reset-btn" id="resetBtn">↺ 重置</button>
+    </div>
+  </div>
+
+  <div class="scoreboard" id="scoreboard"></div>
+
+  <div class="actions">
+    <button id="addGroupBtn">＋ 新增小組</button>
+    <button id="resetAllBtn" class="danger">↺ 全部歸零</button>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal" id="renameModal">
+  <div class="modal-box">
+    <h3>修改組名</h3>
+    <input type="text" id="renameInput" maxlength="12" placeholder="輸入新組名">
+    <div class="modal-actions">
+      <button class="cancel" id="renameCancel">取消</button>
+      <button class="confirm" id="renameConfirm">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Time Modal -->
+<div class="modal" id="customTimeModal">
+  <div class="modal-box">
+    <h3>自訂時間</h3>
+    <input type="number" id="customMinInput" min="1" max="99" placeholder="分鐘" value="5">
+    <input type="number" id="customSecInput" min="0" max="59" placeholder="秒數" value="0">
+    <div class="modal-actions">
+      <button class="cancel" id="customTimeCancel">取消</button>
+      <button class="confirm" id="customTimeConfirm">確定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== Timer =====
+  let totalSeconds = 300;
+  let remaining = 300;
+  let timerInterval = null;
+  let isRunning = false;
+  const display = document.getElementById('timerDisplay');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  function formatTime(s) {
+    const m = Math.floor(Math.abs(s) / 60);
+    const sec = Math.abs(s) % 60;
+    return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+  }
+
+  function updateDisplay() {
+    display.textContent = formatTime(remaining);
+    display.classList.remove('running','warning','over');
+    if (isRunning) display.classList.add('running');
+    if (remaining <= 10 && remaining > 0) display.classList.add('warning');
+    if (remaining <= 0) display.classList.add('over');
+  }
+
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    isRunning = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    updateDisplay();
+  }
+
+  function startTimer() {
+    if (remaining <= 0) remaining = totalSeconds;
+    if (timerInterval) clearInterval(timerInterval);
+    isRunning = true;
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    updateDisplay();
+    timerInterval = setInterval(() => {
+      remaining--;
+      updateDisplay();
+      if (remaining <= 0) {
+        stopTimer();
+        display.classList.add('over');
+      }
+    }, 1000);
+  }
+
+  function resetTimer() {
+    stopTimer();
+    remaining = totalSeconds;
+    updateDisplay();
+  }
+
+  function setTime(minutes) {
+    if (timerInterval) stopTimer();
+    totalSeconds = minutes * 60;
+    remaining = totalSeconds;
+    updateDisplay();
+    document.querySelectorAll('#timerPresets button').forEach(b => b.classList.remove('active'));
+    const btn = [...document.querySelectorAll('#timerPresets button')].find(b => parseInt(b.dataset.min) === minutes);
+    if (btn) btn.classList.add('active');
+  }
+
+  startBtn.addEventListener('click', startTimer);
+  stopBtn.addEventListener('click', stopTimer);
+  resetBtn.addEventListener('click', resetTimer);
+
+  document.querySelectorAll('#timerPresets button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const min = parseInt(btn.dataset.min);
+      if (min === 0) {
+        document.getElementById('customTimeModal').classList.add('show');
+        return;
+      }
+      setTime(min);
+    });
+  });
+
+  document.getElementById('customTimeConfirm').addEventListener('click', () => {
+    const m = parseInt(document.getElementById('customMinInput').value) || 5;
+    const s = parseInt(document.getElementById('customSecInput').value) || 0;
+    totalSeconds = m * 60 + s;
+    remaining = totalSeconds;
+    resetTimer();
+    document.getElementById('customTimeModal').classList.remove('show');
+  });
+  document.getElementById('customTimeCancel').addEventListener('click', () => {
+    document.getElementById('customTimeModal').classList.remove('show');
+  });
+
+  // ===== Scoreboard =====
+  let groups = [
+    { id: 1, name: '第 1 組', score: 0 },
+    { id: 2, name: '第 2 組', score: 0 },
+    { id: 3, name: '第 3 組', score: 0 },
+    { id: 4, name: '第 4 組', score: 0 },
+  ];
+  let renameTarget = null;
+  let nextId = 5;
+
+  const board = document.getElementById('scoreboard');
+
+  function renderScoreboard() {
+    board.innerHTML = groups.map(g => `
+      <div class="group-card">
+        <div class="group-name" data-id="${g.id}">${g.name}</div>
+        <div class="score">${g.score}</div>
+        <div class="score-controls">
+          <button class="plus" data-id="${g.id}">+1</button>
+          <button class="minus" data-id="${g.id}">−1</button>
+          <button class="reset-group" data-id="${g.id}">0</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  board.addEventListener('click', e => {
+    const id = parseInt(e.target.dataset.id);
+    if (!id) return;
+    const group = groups.find(g => g.id === id);
+    if (!group) return;
+
+    if (e.target.classList.contains('plus')) group.score++;
+    else if (e.target.classList.contains('minus')) group.score = Math.max(0, group.score - 1);
+    else if (e.target.classList.contains('reset-group')) group.score = 0;
+    else if (e.target.classList.contains('group-name')) {
+      renameTarget = id;
+      document.getElementById('renameInput').value = group.name;
+      document.getElementById('renameModal').classList.add('show');
+      return;
+    }
+    renderScoreboard();
+  });
+
+  document.getElementById('addGroupBtn').addEventListener('click', () => {
+    groups.push({ id: nextId++, name: `第 ${groups.length+1} 組`, score: 0 });
+    renderScoreboard();
+  });
+
+  document.getElementById('resetAllBtn').addEventListener('click', () => {
+    if (confirm('確定所有小組分數歸零？')) {
+      groups.forEach(g => g.score = 0);
+      renderScoreboard();
+    }
+  });
+
+  document.getElementById('renameConfirm').addEventListener('click', () => {
+    const newName = document.getElementById('renameInput').value.trim();
+    if (newName && renameTarget) {
+      const group = groups.find(g => g.id === renameTarget);
+      if (group) group.name = newName;
+      renderScoreboard();
+    }
+    document.getElementById('renameModal').classList.remove('show');
+    renameTarget = null;
+  });
+  document.getElementById('renameCancel').addEventListener('click', () => {
+    document.getElementById('renameModal').classList.remove('show');
+    renameTarget = null;
+  });
+  document.getElementById('renameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('renameConfirm').click();
+  });
+
+  // Init
+  setTime(3);
+  renderScoreboard();
+</script>
+</body>
+</html>
