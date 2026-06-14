@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>課堂噪音計</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    max-width: 520px;
+    width: 100%;
+    background: #16213e;
+    border-radius: 24px;
+    padding: 40px 30px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    border: 1px solid #0f3460;
+    text-align: center;
+  }
+  h1 {
+    font-size: 1.6rem;
+    color: #e94560;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .subtitle { color: #666; font-size: .8rem; margin-bottom: 28px; }
+
+  .meter-wrapper {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto 24px;
+  }
+  .meter-bg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(
+      #4ecca3 0deg 120deg,
+      #ffc107 120deg 240deg,
+      #e94560 240deg 360deg
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .meter-inner {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: box-shadow .3s;
+  }
+  .meter-inner.low { box-shadow: 0 0 30px rgba(78,204,163,.3); }
+  .meter-inner.mid { box-shadow: 0 0 30px rgba(255,193,7,.3); }
+  .meter-inner.high { box-shadow: 0 0 40px rgba(233,69,96,.5); }
+
+  .needle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 120px;
+    background: #eee;
+    border-radius: 2px;
+    transform-origin: 50% 100%;
+    transform: translate(-50%, -100%) rotate(-60deg);
+    transition: transform .15s ease;
+  }
+  .needle-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    background: #e94560;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+  }
+
+  .level-label {
+    font-size: .85rem;
+    margin-bottom: 4px;
+    color: #888;
+  }
+  .level-value {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .level-value.low { color: #4ecca3; }
+  .level-value.mid { color: #ffc107; }
+  .level-value.high { color: #e94560; }
+
+  .status {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    min-height: 28px;
+  }
+  .status.low { color: #4ecca3; }
+  .status.mid { color: #ffc107; }
+  .status.high { color: #e94560; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+  .controls { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .controls button {
+    background: #0f3460;
+    color: #eee;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all .2s;
+  }
+  .controls button:hover { filter: brightness(1.2); }
+  .controls .start-btn { background: #4ecca3; color: #1a1a2e; font-weight: 600; }
+  .controls .stop-btn { background: #e94560; }
+  .controls .reset-btn { background: #555; }
+
+  .threshold-bar {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+  .threshold-bar label { color: #888; font-size: .85rem; }
+  .threshold-bar input[type="range"] {
+    width: 120px;
+    accent-color: #e94560;
+  }
+  .threshold-bar .val { color: #eee; font-size: .85rem; min-width: 32px; }
+
+  .warning-flash {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(233,69,96,.15);
+    pointer-events: none;
+    z-index: 50;
+    animation: flash 1s infinite;
+  }
+  .warning-flash.active { display: block; }
+  @keyframes flash { 0%,100% { opacity: .3; } 50% { opacity: .8; } }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🔊 課堂噪音計</h1>
+  <p class="subtitle">開啟麥克風，即時監控課堂音量</p>
+
+  <div class="meter-wrapper">
+    <div class="meter-bg">
+      <div class="meter-inner" id="meterInner">
+        <div class="level-label">當前音量</div>
+        <div class="level-value" id="levelValue">0</div>
+        <div class="level-label">dB</div>
+      </div>
+    </div>
+    <div class="needle" id="needle" style="transform: translate(-50%, -100%) rotate(-60deg);"></div>
+    <div class="needle-dot"></div>
+  </div>
+
+  <div class="status" id="status">🔇 點擊開始監聽</div>
+
+  <div class="threshold-bar">
+    <label>⚠️ 閾值</label>
+    <input type="range" id="thresholdSlider" min="40" max="90" value="65">
+    <span class="val" id="thresholdVal">65</span>
+  </div>
+
+  <div class="controls">
+    <button class="start-btn" id="startBtn">🎤 開始監聽</button>
+    <button class="stop-btn" id="stopBtn" disabled>⏹ 停止</button>
+  </div>
+</div>
+
+<div class="warning-flash" id="warningFlash"></div>
+
+<script>
+  let audioContext = null;
+  let analyser = null;
+  let source = null;
+  let stream = null;
+  let animFrame = null;
+  let isListening = false;
+  let threshold = 65;
+
+  const meterInner = document.getElementById('meterInner');
+  const levelValue = document.getElementById('levelValue');
+  const needle = document.getElementById('needle');
+  const status = document.getElementById('status');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const thresholdSlider = document.getElementById('thresholdSlider');
+  const thresholdVal = document.getElementById('thresholdVal');
+  const warningFlash = document.getElementById('warningFlash');
+
+  thresholdSlider.addEventListener('input', () => {
+    threshold = parseInt(thresholdSlider.value);
+    thresholdVal.textContent = threshold;
+  });
+
+  function getVolume() {
+    if (!analyser) return 0;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const val = Math.abs(data[i] - 128);
+      sum += val;
+    }
+    const avg = sum / data.length;
+    // Map 0-128 to 0-100
+    return Math.min(100, Math.round((avg / 128) * 100));
+  }
+
+  function updateMeter(vol) {
+    // Needle: -60deg (quiet) to 60deg (loud)
+    const angle = -60 + (vol / 100) * 120;
+    needle.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+
+    levelValue.textContent = vol;
+    levelValue.className = 'level-value';
+
+    let zone = 'low';
+    if (vol >= threshold) zone = 'high';
+    else if (vol >= threshold * 0.6) zone = 'mid';
+
+    meterInner.className = `meter-inner ${zone}`;
+    status.className = `status ${zone}`;
+
+    if (vol >= threshold) {
+      status.textContent = '🔊 太吵了！安靜！';
+      warningFlash.classList.add('active');
+    } else if (vol >= threshold * 0.6) {
+      status.textContent = '⚡ 有點大聲喔';
+      warningFlash.classList.remove('active');
+    } else {
+      status.textContent = '✅ 音量適中';
+      warningFlash.classList.remove('active');
+    }
+  }
+
+  async function startListening() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      isListening = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      status.textContent = '🎤 監聽中...';
+      status.className = 'status';
+
+      function tick() {
+        if (!isListening) return;
+        const vol = getVolume();
+        updateMeter(vol);
+        animFrame = requestAnimationFrame(tick);
+      }
+      tick();
+    } catch (err) {
+      status.textContent = '❌ 無法存取麥克風，請允許權限後重試';
+      status.className = 'status';
+    }
+  }
+
+  function stopListening() {
+    isListening = false;
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    if (audioContext) { audioContext.close(); audioContext = null; }
+    analyser = null;
+    source = null;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    warningFlash.classList.remove('active');
+    status.textContent = '🔇 已停止';
+    status.className = 'status';
+    updateMeter(0);
+  }
+
+  startBtn.addEventListener('click', startListening);
+  stopBtn.addEventListener('click', stopListening);
+</script>
+</body>
+</html>

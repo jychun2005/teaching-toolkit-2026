@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>即時投票</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    max-width: 640px;
+    width: 100%;
+    background: #16213e;
+    border-radius: 24px;
+    padding: 36px 28px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    border: 1px solid #0f3460;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    color: #e94560;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+
+  .phase-setup, .phase-vote, .phase-result { display: none; }
+  .phase-setup.active, .phase-vote.active, .phase-result.active { display: block; }
+
+  .field-group { margin-bottom: 16px; }
+  .field-group label { display: block; font-size: .85rem; color: #888; margin-bottom: 4px; }
+  .field-group input, .field-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: .95rem;
+  }
+  .field-group input:focus, .field-group textarea:focus { outline: 2px solid #e94560; }
+  .field-group textarea { resize: vertical; min-height: 80px; }
+
+  .options-list { margin-bottom: 16px; }
+  .option-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .option-row input { flex: 1; }
+  .option-row .remove-opt {
+    background: transparent;
+    color: #e94560;
+    border: 1px solid #e94560;
+    border-radius: 8px;
+    width: 36px; height: 36px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all .15s;
+  }
+  .option-row .remove-opt:hover { background: #e94560; color: #fff; }
+  .add-opt-btn {
+    background: transparent;
+    color: #4ecca3;
+    border: 1px dashed #4ecca3;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: .85rem;
+    transition: all .15s;
+  }
+  .add-opt-btn:hover { background: #4ecca3; color: #1a1a2e; }
+
+  .btn-primary {
+    background: #e94560;
+    color: #fff;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-primary:hover { filter: brightness(1.15); }
+
+  .vote-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .vote-btn {
+    background: #0f3460;
+    color: #eee;
+    border: 2px solid #1a4a8a;
+    padding: 14px 20px;
+    border-radius: 14px;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: left;
+  }
+  .vote-btn:hover { border-color: #e94560; background: #1a4a8a; }
+  .vote-btn.selected { border-color: #4ecca3; background: #0f3460; box-shadow: 0 0 12px rgba(78,204,163,.3); }
+  .vote-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .vote-question { font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: #4ecca3; }
+
+  .result-bar { margin-bottom: 12px; }
+  .result-bar .rlabel { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: 4px; }
+  .result-bar .rlabel .rname { color: #eee; }
+  .result-bar .rlabel .rcount { color: #888; }
+  .result-bar .rbar {
+    height: 28px;
+    border-radius: 14px;
+    transition: width .6s ease;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    font-size: .8rem;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .result-bar .rbar.opt0 { background: #e94560; }
+  .result-bar .rbar.opt1 { background: #4ecca3; }
+  .result-bar .rbar.opt2 { background: #ffc107; color: #1a1a2e; }
+  .result-bar .rbar.opt3 { background: #8b5cf6; }
+  .result-bar .rbar.opt4 { background: #f97316; }
+  .result-bar .rbar.opt5 { background: #06b6d4; }
+  .result-bar .rbar.opt6 { background: #ec4899; }
+  .result-bar .rbar.opt7 { background: #84cc16; color: #1a1a2e; }
+
+  .total-votes { text-align: center; color: #888; font-size: .85rem; margin-top: 16px; }
+  .result-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .result-actions button {
+    background: #0f3460;
+    color: #eee;
+    border: 1px solid #1a4a8a;
+    padding: 8px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: .9rem;
+    transition: all .2s;
+  }
+  .result-actions button:hover { background: #1a4a8a; }
+
+  .bottom-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .bottom-actions button {
+    background: #0f3460;
+    color: #eee;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: .95rem;
+    transition: all .2s;
+  }
+  .bottom-actions button:hover { filter: brightness(1.2); }
+  .bottom-actions .danger-btn { background: #e94560; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📊 即時投票</h1>
+
+  <!-- Phase: Setup -->
+  <div class="phase-setup active" id="phaseSetup">
+    <div class="field-group">
+      <label>投票問題</label>
+      <input type="text" id="pollQuestion" placeholder="例如：你最喜歡哪個單元？" value="你最喜歡哪個單元？">
+    </div>
+    <div class="field-group">
+      <label>說明（選填）</label>
+      <textarea id="pollDesc" placeholder="補充說明">請選擇一個答案</textarea>
+    </div>
+    <div class="options-list" id="optionsList">
+      <div class="option-row"><input type="text" class="opt-input" value="單元一" placeholder="選項 1"></div>
+      <div class="option-row"><input type="text" class="opt-input" value="單元二" placeholder="選項 2"></div>
+      <div class="option-row"><input type="text" class="opt-input" value="單元三" placeholder="選項 3"></div>
+    </div>
+    <button class="add-opt-btn" id="addOptBtn">＋ 新增選項</button>
+    <div class="bottom-actions" style="margin-top:20px">
+      <button class="btn-primary" id="startPollBtn">🚀 開始投票</button>
+    </div>
+  </div>
+
+  <!-- Phase: Vote -->
+  <div class="phase-vote" id="phaseVote">
+    <div class="vote-question" id="voteQuestion"></div>
+    <p style="color:#666;font-size:.8rem;margin-bottom:16px" id="voteDesc"></p>
+    <div class="vote-options" id="voteOptions"></div>
+    <div class="bottom-actions">
+      <button class="btn-primary" id="submitVoteBtn" disabled>📤 送出投票</button>
+      <button class="danger-btn" id="endVoteBtn">⏹ 結束投票</button>
+    </div>
+  </div>
+
+  <!-- Phase: Result -->
+  <div class="phase-result" id="phaseResult">
+    <div class="vote-question" id="resultQuestion"></div>
+    <div id="resultBars"></div>
+    <div class="total-votes" id="totalVotes">0 票</div>
+    <div class="result-actions">
+      <button id="newPollBtn">🔄 新投票</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let options = [];
+  let votes = {};
+  let votedOption = null;
+  const colors = ['opt0','opt1','opt2','opt3','opt4','opt5','opt6','opt7'];
+
+  // Setup phase
+  const phaseSetup = document.getElementById('phaseSetup');
+  const phaseVote = document.getElementById('phaseVote');
+  const phaseResult = document.getElementById('phaseResult');
+  const optionsList = document.getElementById('optionsList');
+  const addOptBtn = document.getElementById('addOptBtn');
+  const startPollBtn = document.getElementById('startPollBtn');
+
+  function getOptionInputs() {
+    return optionsList.querySelectorAll('.opt-input');
+  }
+
+  addOptBtn.addEventListener('click', () => {
+    const n = getOptionInputs().length + 1;
+    const row = document.createElement('div');
+    row.className = 'option-row';
+    row.innerHTML = `<input type="text" class="opt-input" placeholder="選項 ${n}">
+      <button class="remove-opt">✕</button>`;
+    row.querySelector('.remove-opt').addEventListener('click', () => {
+      if (getOptionInputs().length <= 2) return;
+      row.remove();
+    });
+    optionsList.appendChild(row);
+  });
+
+  // Vote phase
+  const voteQuestion = document.getElementById('voteQuestion');
+  const voteDesc = document.getElementById('voteDesc');
+  const voteOptions = document.getElementById('voteOptions');
+  const submitVoteBtn = document.getElementById('submitVoteBtn');
+  const endVoteBtn = document.getElementById('endVoteBtn');
+
+  startPollBtn.addEventListener('click', () => {
+    const opts = [...getOptionInputs()].map(i => i.value.trim()).filter(Boolean);
+    if (opts.length < 2) { alert('至少需要 2 個選項'); return; }
+    options = opts;
+    votes = {};
+    votedOption = null;
+
+    const q = document.getElementById('pollQuestion').value.trim() || '未命名投票';
+    voteQuestion.textContent = q;
+    voteDesc.textContent = document.getElementById('pollDesc').value.trim() || '';
+
+    voteOptions.innerHTML = opts.map((o, i) =>
+      `<button class="vote-btn" data-index="${i}">${o}</button>`
+    ).join('');
+
+    document.querySelectorAll('.vote-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.vote-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        votedOption = parseInt(btn.dataset.index);
+        submitVoteBtn.disabled = false;
+      });
+    });
+
+    phaseSetup.classList.remove('active');
+    phaseVote.classList.add('active');
+  });
+
+  submitVoteBtn.addEventListener('click', () => {
+    if (votedOption === null) return;
+    votes[votedOption] = (votes[votedOption] || 0) + 1;
+    document.querySelectorAll('.vote-btn').forEach(b => b.classList.remove('selected'));
+    submitVoteBtn.disabled = true;
+    votedOption = null;
+    showResult();
+  });
+
+  endVoteBtn.addEventListener('click', () => {
+    showResult();
+  });
+
+  // Result phase
+  const resultQuestion = document.getElementById('resultQuestion');
+  const resultBars = document.getElementById('resultBars');
+  const totalVotes = document.getElementById('totalVotes');
+  const newPollBtn = document.getElementById('newPollBtn');
+
+  function showResult() {
+    phaseVote.classList.remove('active');
+    phaseResult.classList.add('active');
+
+    resultQuestion.textContent = document.getElementById('pollQuestion').value.trim() || '未命名投票';
+    const total = Object.values(votes).reduce((a,b) => a+b, 0);
+    totalVotes.textContent = `${total} 票`;
+
+    resultBars.innerHTML = options.map((o, i) => {
+      const count = votes[i] || 0;
+      const pct = total > 0 ? (count / total * 100) : 0;
+      return `<div class="result-bar">
+        <div class="rlabel">
+          <span class="rname">${o}</span>
+          <span class="rcount">${count} 票 (${Math.round(pct)}%)</span>
+        </div>
+        <div class="rbar ${colors[i % colors.length]}" style="width:${Math.max(pct, 2)}%">${Math.round(pct)}%</div>
+      </div>`;
+    }).join('');
+  }
+
+  newPollBtn.addEventListener('click', () => {
+    phaseResult.classList.remove('active');
+    phaseSetup.classList.add('active');
+    options = [];
+    votes = {};
+    votedOption = null;
+  });
+</script>
+</body>
+</html>
