@@ -114,6 +114,8 @@
   .group-card .score-controls .minus { background: #e94560; color: #fff; }
   .group-card .score-controls button:hover { filter: brightness(1.2); transform: scale(1.05); }
   .group-card .score-controls .reset-group { background: #555; color: #eee; font-size: .9rem; width: auto; padding: 0 12px; }
+  .group-card .score-controls .delete-group { background: transparent; color: #e94560; font-size: 1rem; width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e94560; cursor: pointer; transition: all .15s; }
+  .group-card .score-controls .delete-group:hover { background: #e94560; color: #fff; }
 
   /* Actions */
   .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
@@ -334,6 +336,7 @@
           <button class="plus" data-id="${g.id}">+1</button>
           <button class="minus" data-id="${g.id}">−1</button>
           <button class="reset-group" data-id="${g.id}">0</button>
+          <button class="delete-group" data-id="${g.id}">✕</button>
         </div>
       </div>
     `).join('');
@@ -348,6 +351,12 @@
     if (e.target.classList.contains('plus')) group.score++;
     else if (e.target.classList.contains('minus')) group.score = Math.max(0, group.score - 1);
     else if (e.target.classList.contains('reset-group')) group.score = 0;
+    else if (e.target.classList.contains('delete-group')) {
+      if (groups.length <= 1) { alert('至少要保留一組'); return; }
+      if (confirm(`確定刪除「${group.name}」？`)) {
+        groups = groups.filter(g => g.id !== id);
+      }
+    }
     else if (e.target.classList.contains('group-name')) {
       renameTarget = id;
       document.getElementById('renameInput').value = group.name;
@@ -358,7 +367,8 @@
   });
 
   document.getElementById('addGroupBtn').addEventListener('click', () => {
-    groups.push({ id: nextId++, name: `第 ${groups.length+1} 組`, score: 0 });
+    const n = Math.max(...groups.map(g => parseInt(g.name.match(/\d+/)?.[0] || 0)), 0) + 1;
+    groups.push({ id: nextId++, name: `第 ${n} 組`, score: 0 });
     renderScoreboard();
   });
 
